@@ -102,6 +102,28 @@ User-Agent:      Mozilla/5.0 (Linux; Android 12; SM-G973F) ... Chrome/149.0.0.0 
 X-Requested-With: (absent)
 ```
 
+### The release build
+
+The signed release APK was installed and put through the same flow: a fresh install, a
+profile created from the empty state, and the profile opened for the first time on
+`browserscan.net`.
+
+```
+IPFighter score          100%
+Fingerprint masking      Not detected
+Automation / bot         No automation
+User-Agent               Mozilla/5.0 (Linux; Android 16; Pixel 9 Pro XL) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36
+Platform                 Linux armv8l
+Time zone                Asia/Dhaka
+Accept-Language          bn-BD,bn;q=0.9,en;q=0.8
+Sec-Ch-Ua                "Not_A Brand";v="8", "Chromium";v="149", "Google Chrome";v="149"
+X-Requested-With         (absent)
+```
+
+The release build has no inspector attached by default, which is the right default: a page
+can find an open inspector. Turning on **Settings → Developer → Web inspector** makes the
+engine inspectable, and the numbers above were read that way.
+
 ### Other platforms
 
 `browserscan.net`, `ipfighter.com` and `httpbingo.org` were run end to end. The remaining
