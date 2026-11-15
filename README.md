@@ -7,6 +7,19 @@ to the internet and its own set of built-in tools.
 Ported from the Windows desktop build (C# / WinForms) to native Android (Kotlin / Jetpack
 Compose), keeping the same engine, the same data tables and the same design language.
 
+## Download
+
+**[⬇ Joe Browser 1.16.0 — GitHub Release](https://github.com/pritamsarkar711/Joe-Browser-Android/releases/tag/v1.16.0)**
+
+| | |
+|---|---|
+| `JoeBrowser-1.16.0-release.apk` | the installable app |
+| `JoeBrowser-1.16.0-release.aab` | the app bundle for Google Play |
+
+```bash
+adb install -r JoeBrowser-1.16.0-release.apk
+```
+
 ---
 
 ## What it does
