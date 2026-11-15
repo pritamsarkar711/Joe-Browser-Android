@@ -301,6 +301,16 @@ object FingerprintFactory {
                 fp.webGlVendor = gpus[idx].first
                 repaired++
             }
+        } else if (gpus.isNotEmpty() && !FingerprintCatalog.isWindows(fp.os)) {
+            // The adapter is not one this platform can have. On Windows a card that is
+            // newer than the table is still a card that exists, so it is kept; on every
+            // other platform the table is closed, and an adapter outside it is a
+            // contradiction rather than a new piece of hardware.
+            val byVendor = gpus.firstOrNull { it.first == fp.webGlVendor }
+            val replacement = byVendor ?: gpus.first()
+            fp.webGlRenderer = replacement.second
+            fp.webGlVendor = replacement.first
+            repaired++
         } else {
             val vendor = FingerprintCatalog.vendorForRenderer(fp.webGlRenderer)
             if (vendor != null && fp.webGlVendor != vendor) {
