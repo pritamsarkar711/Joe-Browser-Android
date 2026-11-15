@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Joe Browser</string>
+    <string name="extensions_store">Extension store</string>
+    <string name="proxy_watch_channel">Proxy guard</string>
+    <string name="proxy_watch_title">Watching the proxy</string>
+    <string name="proxy_watch_running">Joe Browser is watching the proxy of your profiles.</string>
+    <string name="notification_channel_proxy">Proxy alerts</string>
+    <string name="notification_channel_proxy_desc">Warns when a proxy stops answering or when the exit address changes.</string>
+</resources>

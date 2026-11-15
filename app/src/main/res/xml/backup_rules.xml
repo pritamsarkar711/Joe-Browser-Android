@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The backup keeps the profiles and the settings, but never the secrets: the proxy
+  passwords are encrypted with a key that lives in this device's keystore and is
+  never exported, so a restored vault simply has no readable password.
+-->
+<full-backup-content>
+    <include domain="file" path="joe-browser/profiles/" />
+    <include domain="file" path="joe-browser/settings.json" />
+    <include domain="file" path="joe-browser/proxies.json" />
+    <include domain="file" path="joe-browser/extensions.json" />
+    <exclude domain="file" path="joe-browser/browsers/" />
+    <exclude domain="file" path="joe-browser/logs/" />
+</full-backup-content>

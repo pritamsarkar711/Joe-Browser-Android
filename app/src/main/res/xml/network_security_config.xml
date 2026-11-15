@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext traffic is refused everywhere: a profile that reports an encrypted
+  connection and then opens a plain one is a contradiction, and the proxy relay
+  needs a real TLS connection to the origin.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
