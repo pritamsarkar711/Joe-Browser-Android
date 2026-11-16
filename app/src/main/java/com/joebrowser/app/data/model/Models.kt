@@ -138,6 +138,21 @@ data class FingerprintConfig(
             val i = timezone.lastIndexOf('/')
             return if (i >= 0) timezone.substring(i + 1).replace('_', ' ') else timezone
         }
+
+    /**
+     * The languages the browser reports.
+     *
+     * A browser reports the language and then its base, in that order, and nothing else.
+     */
+    val languages: List<String>
+        get() {
+            val dash = language.indexOf('-')
+            return if (dash > 0) {
+                listOf(language, language.substring(0, dash))
+            } else {
+                listOf(language)
+            }
+        }
 }
 
 /** A browser profile: an independent identity with its own storage, proxy and tools. */

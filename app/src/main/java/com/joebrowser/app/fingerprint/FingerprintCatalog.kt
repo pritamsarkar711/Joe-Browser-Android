@@ -115,12 +115,28 @@ object FingerprintCatalog {
             doubleArrayOf(1680.0, 1050.0, 1.0),
         ),
         OS_ANDROID to listOf(
-            doubleArrayOf(411.0, 915.0, 2.625),
-            doubleArrayOf(427.0, 952.0, 3.0),
-            doubleArrayOf(411.0, 891.0, 3.5),
-            doubleArrayOf(393.0, 851.0, 2.75),
+            // The viewport and the scale belong together: the physical panel is the
+            // viewport multiplied by the scale, and a pair that does not multiply out to
+            // a panel anybody ships is a contradiction a page can find.
+            //
+            // The order is the order of how often the handset is met on the street. The
+            // common ones come first, because a rare identity is an identity that a
+            // checker's table of real machines will not have, and a machine it has never
+            // seen looks unreliable however well it is put together.
+            doubleArrayOf(412.0, 915.0, 2.625),
+            doubleArrayOf(412.0, 915.0, 2.625),
             doubleArrayOf(360.0, 780.0, 3.0),
+            doubleArrayOf(360.0, 780.0, 3.0),
+            doubleArrayOf(393.0, 873.0, 2.75),
+            doubleArrayOf(393.0, 873.0, 2.75),
+            doubleArrayOf(384.0, 824.0, 3.0),
+            doubleArrayOf(384.0, 824.0, 3.0),
+            doubleArrayOf(411.0, 915.0, 2.625),
+            doubleArrayOf(412.0, 892.0, 3.5),
+            doubleArrayOf(384.0, 854.0, 3.0),
             doubleArrayOf(411.0, 869.0, 3.5),
+            doubleArrayOf(411.0, 891.0, 3.5),
+            doubleArrayOf(427.0, 952.0, 3.0),
         ),
         OS_IPHONE to listOf(
             doubleArrayOf(393.0, 852.0, 3.0),
@@ -229,13 +245,26 @@ object FingerprintCatalog {
     // Devices: viewport key -> { model, android version, gl vendor, gl renderer }
     // ---------------------------------------------------------------------------------------
 
+    /**
+     * The handsets a viewport belongs to.
+     *
+     * A profile that claims a screen size no phone has is a contradiction, and a profile
+     * that claims the screen of one handset and the graphics of another is a worse one.
+     * Each row therefore carries the handset, the release it runs, and the adapter it
+     * actually ships with. The list is ordered by how common the handset is, because the
+     * common ones are the ones a profile is most likely to be compared against.
+     */
     val ANDROID_DEVICES: Map<String, List<String>> = mapOf(
-        "411x915" to listOf("Pixel 9", "16", "Google Inc. (ARM)", "ANGLE (ARM, Mali-G715, OpenGL ES 3.2)"),
-        "427x952" to listOf("Pixel 9 Pro XL", "16", "Google Inc. (ARM)", "ANGLE (ARM, Mali-G715, OpenGL ES 3.2)"),
-        "411x891" to listOf("SM-S931B", "16", "Google Inc. (Qualcomm)", "ANGLE (Qualcomm, Adreno (TM) 830, OpenGL ES 3.2)"),
-        "393x851" to listOf("SM-S908B", "15", "Google Inc. (Qualcomm)", "ANGLE (Qualcomm, Adreno (TM) 730, OpenGL ES 3.2)"),
+        "412x915" to listOf("Pixel 7", "14", "Google Inc. (ARM)", "ANGLE (ARM, Mali-G710, OpenGL ES 3.2)"),
         "360x780" to listOf("SM-A155F", "15", "Google Inc. (ARM)", "ANGLE (ARM, Mali-G57, OpenGL ES 3.2)"),
+        "393x873" to listOf("220333QAG", "14", "Google Inc. (Qualcomm)", "ANGLE (Qualcomm, Adreno (TM) 619, OpenGL ES 3.2)"),
+        "384x824" to listOf("SM-A546B", "14", "Google Inc. (ARM)", "ANGLE (ARM, Mali-G68, OpenGL ES 3.2)"),
+        "411x915" to listOf("Pixel 9", "16", "Google Inc. (ARM)", "ANGLE (ARM, Mali-G715, OpenGL ES 3.2)"),
+        "412x892" to listOf("2201123G", "14", "Google Inc. (Qualcomm)", "ANGLE (Qualcomm, Adreno (TM) 740, OpenGL ES 3.2)"),
+        "384x854" to listOf("CPH2451", "14", "Google Inc. (Qualcomm)", "ANGLE (Qualcomm, Adreno (TM) 740, OpenGL ES 3.2)"),
         "411x869" to listOf("SM-G973F", "12", "Google Inc. (ARM)", "ANGLE (ARM, Mali-G76, OpenGL ES 3.2)"),
+        "411x891" to listOf("SM-S931B", "15", "Google Inc. (Qualcomm)", "ANGLE (Qualcomm, Adreno (TM) 750, OpenGL ES 3.2)"),
+        "427x952" to listOf("Pixel 9 Pro XL", "16", "Google Inc. (ARM)", "ANGLE (ARM, Mali-G715, OpenGL ES 3.2)"),
     )
 
     val ANDROID_TABLETS: Map<String, List<String>> = mapOf(

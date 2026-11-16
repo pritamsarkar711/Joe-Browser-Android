@@ -9,15 +9,15 @@ Compose), keeping the same engine, the same data tables and the same design lang
 
 ## Download
 
-**[⬇ Joe Browser 1.16.0 — GitHub Release](https://github.com/pritamsarkar711/Joe-Browser-Android/releases/tag/v1.16.0)**
+**[⬇ Joe Browser 1.17.0 — GitHub Release](https://github.com/pritamsarkar711/Joe-Browser-Android/releases/tag/v1.17.0)**
 
 | | |
 |---|---|
-| `JoeBrowser-1.16.0-release.apk` | the installable app |
-| `JoeBrowser-1.16.0-release.aab` | the app bundle for Google Play |
+| `JoeBrowser-1.17.0-release.apk` | the installable app |
+| `JoeBrowser-1.17.0-release.aab` | the app bundle for Google Play |
 
 ```bash
-adb install -r JoeBrowser-1.16.0-release.apk
+adb install -r JoeBrowser-1.17.0-release.apk
 ```
 
 ---
@@ -55,6 +55,47 @@ The engine is the system WebView, driven to look like the browser the profile na
 * The requests are made by the app, so the engine never adds the header that names the
   package it lives in.
 
+It is a browser, not a page viewer:
+
+| | |
+|---|---|
+| **Tabs** | several at once, each its own page with the profile's identity, switched without a reload |
+| **Address bar** | tap to type, tap to go, search when it is not an address |
+| **Reader mode** | the article on its own, with the interface taken away |
+| **Desktop site** | the wide layout, for the pages that need it |
+| **Find on page** | as you read, not in a menu |
+| **Bookmarks** | saved from the toolbar, listed in a sheet |
+| **Downloads** | listed, and kept out of the device's gallery |
+| **Share** | the link, to anything on the phone |
+| **Identity check** | what the page sees against what the profile says |
+
+### The engines
+
+Every engine is built into the app. Nothing is downloaded, nothing is installed and nothing
+is handed over to another program.
+
+| Engine | What it reports |
+|---|---|
+| **Joe Browser** | the app's own engine, on Chromium |
+| **Chrome** | Chrome |
+| **Chromium** | Chromium, with the two brand list a real Chromium sends |
+| **Brave** | Brave |
+| **Edge** | Edge |
+| **Firefox** | Firefox, with no client hints, because Firefox has none |
+
+That is the whole point of an anti-detect browser. A real Chrome on the device would be a
+different program with its own idea of what the machine is, and the profile would be
+describing a machine that browser had never seen.
+
+### The identity check
+
+The app can check its own work. The identity check reads everything the browser will tell
+a page, compares every value with what the profile says, and shows the ones that
+disagree — each one marked **Agree**, **Disagree** or **Not checked**.
+
+Nothing is claimed that has not been compared, and the page links out to the checks
+themselves so the answer can be seen from the outside as well.
+
 ### Proxies
 
 * A proxy can be pasted in any shape: `host:port`, `host:port:user:pass`,
@@ -90,11 +131,11 @@ The Chrome Web Store opens inside the app. The extension's package is fetched th
 store itself hands it out, unpacked, and its content scripts and stylesheets are run in the
 pages of every profile that asks for them.
 
-### Engines
+### The rendering engine
 
-The engines the app knows about, the ones installed on the device, and the version that is
-really rendering the pages. A package can be downloaded and handed to the system
-installer, which always asks first.
+The engine that renders the pages is the system WebView, and its version is the number a
+profile has to report: a page can find out which Chromium it is talking to by asking
+whether the engine understands a feature from a particular release.
 
 ---
 

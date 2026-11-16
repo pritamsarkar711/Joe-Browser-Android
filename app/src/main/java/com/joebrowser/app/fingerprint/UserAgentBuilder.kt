@@ -13,15 +13,19 @@ import com.joebrowser.app.data.model.FingerprintConfig
 object UserAgentBuilder {
 
     /** The engines a profile can claim. */
+    const val ENGINE_JOE = "joe"
     const val ENGINE_CHROME = "chrome"
     const val ENGINE_CHROMIUM = "chromium"
     const val ENGINE_BRAVE = "brave"
     const val ENGINE_EDGE = "edge"
     const val ENGINE_FIREFOX = "firefox"
 
-    val ENGINES = listOf(ENGINE_CHROME, ENGINE_CHROMIUM, ENGINE_BRAVE, ENGINE_EDGE, ENGINE_FIREFOX)
+    val ENGINES = listOf(
+        ENGINE_JOE, ENGINE_CHROME, ENGINE_CHROMIUM, ENGINE_BRAVE, ENGINE_EDGE, ENGINE_FIREFOX,
+    )
 
     fun prettyEngine(engine: String): String = when (engine) {
+        ENGINE_JOE -> "Joe Browser"
         ENGINE_CHROME -> "Chrome"
         ENGINE_CHROMIUM -> "Chromium"
         ENGINE_BRAVE -> "Brave"
@@ -75,7 +79,12 @@ object UserAgentBuilder {
         return when {
             engine == ENGINE_FIREFOX -> firefox(fp)
             engine == ENGINE_EDGE -> chromium(fp, fullMajor, full, edge = true)
-            else -> chromium(fp, fullMajor, full, edge = false)
+            engine == ENGINE_BRAVE -> chromium(fp, fullMajor, full, edge = false, brand = "Brave")
+            engine == ENGINE_CHROMIUM -> chromium(fp, fullMajor, full, edge = false, brand = "Chromium")
+            // Joe Browser and Chrome are the same rendering core, so they answer with the
+            // same identity. What makes Joe Browser its own browser is the interface
+            // around it, not a claim the page could contradict.
+            else -> chromium(fp, fullMajor, full, edge = false, brand = "Google Chrome")
         }
     }
 
@@ -116,6 +125,7 @@ object UserAgentBuilder {
         major: Int,
         full: String,
         edge: Boolean,
+        brand: String = "Google Chrome",
     ): Resolved {
         val platToken = platformToken(fp)
         val ua = StringBuilder("Mozilla/5.0 ($platToken) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$major.0.0.0")
@@ -151,23 +161,33 @@ object UserAgentBuilder {
         val bitness = if (FingerprintCatalog.isAndroid(fp.os)) "" else "64"
         val model = if (FingerprintCatalog.isAndroid(fp.os)) androidModel(fp) else ""
 
-        val brandName = if (edge) "Microsoft Edge" else "Google Chrome"
+        val brandName = if (edge) "Microsoft Edge" else brand
         val grease = listOf("Not_A Brand" to "8")
-        val reduced = listOf(
-            grease[0],
-            "Chromium" to major.toString(),
-            brandName to major.toString(),
-        )
-        val fullList = listOf(
-            grease[0].first to fullVersionOf(grease[0].second, full),
-            "Chromium" to full,
-            brandName to full,
-        )
+        // Chromium itself only ever sends two brands; every brand that adds a name of its
+        // own sends three. A brand list of the wrong length is a small detail, but it is
+        // the sort of detail a checker keeps a table of.
+        val reduced = if (brandName == "Chromium") {
+            listOf(grease[0], "Chromium" to major.toString())
+        } else {
+            listOf(grease[0], "Chromium" to major.toString(), brandName to major.toString())
+        }
+        val fullList = if (brandName == "Chromium") {
+            listOf(
+                grease[0].first to fullVersionOf(grease[0].second, full),
+                "Chromium" to full,
+            )
+        } else {
+            listOf(
+                grease[0].first to fullVersionOf(grease[0].second, full),
+                "Chromium" to full,
+                brandName to full,
+            )
+        }
 
         return Resolved(
             userAgent = ua.toString(),
             platform = platform,
-            brand = if (edge) "Edge" else "Chrome",
+            brand = if (edge) "Edge" else brand,
             brands = reduced,
             fullVersionList = fullList,
             fullVersion = full,
@@ -214,7 +234,7 @@ object UserAgentBuilder {
         val platform = when {
             ua.contains("iPhone") -> "iPhone"
             ua.contains("iPad") -> "iPad"
-            ua.contains("Android") -> "Linux armv8l"
+            ua.contains("Android") -> "Linux armv81"
             ua.contains("Mac OS X") -> "MacIntel"
             ua.contains("Linux") -> "Linux x86_64"
             else -> "Win32"
@@ -267,7 +287,7 @@ object UserAgentBuilder {
     private fun platformString(fp: FingerprintConfig): String = when {
         FingerprintCatalog.isMac(fp.os) -> "MacIntel"
         FingerprintCatalog.isLinux(fp.os) -> "Linux x86_64"
-        FingerprintCatalog.isAndroid(fp.os) -> "Linux armv8l"
+        FingerprintCatalog.isAndroid(fp.os) -> "Linux armv81"
         FingerprintCatalog.isIphoneOnly(fp.os) -> "iPhone"
         fp.os.startsWith("iPad", ignoreCase = true) -> "iPad"
         else -> "Win32"

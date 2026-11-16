@@ -439,4 +439,33 @@ object FingerprintFactory {
         .removePrefix("Google Inc. ")
         .removeSurrounding("(", ")")
         .ifBlank { "Unknown" }
+
+    /**
+     * The WebGL version string that belongs to an adapter.
+     *
+     * A page that reads the renderer and then reads the version finds out that the two
+     * were written by different hands when they do not agree, and a renderer that says
+     * Mali-G76 under a version that says "OpenGL ES 2.0 Chromium" is one of the cheapest
+     * tells there is.
+     */
+    fun glVersionFor(renderer: String, webGl2: Boolean = false): String {
+        val head = if (webGl2) "WebGL 2.0" else "WebGL 1.0"
+        val inner = if (renderer.startsWith("ANGLE (")) {
+            renderer.removePrefix("ANGLE (").removeSuffix(")")
+        } else {
+            renderer
+        }
+        val parts = inner.split(", ")
+        val gpu = if (parts.size > 1) parts[1] else inner
+        val d3d = Regex("(Direct3D\\d+ vs_\\d+ ps_\\d+)").find(renderer)?.groupValues?.get(1)
+        val es = Regex("OpenGL ES ([\\d.]+)").find(renderer)?.groupValues?.get(1)
+        val gl = Regex("OpenGL ([\\d.]+)").find(renderer)?.groupValues?.get(1)
+        val version = es ?: gl
+        return when {
+            d3d != null -> "$head ($d3d)"
+            version != null -> "$head (OpenGL ES $version" + (if (gpu.isNotBlank()) " $gpu" else "") + ")"
+            renderer.contains("Metal", ignoreCase = true) -> "$head (Metal)"
+            else -> "$head (OpenGL ES 3.0 " + (if (gpu.isNotBlank()) gpu else "Chromium") + ")"
+        }
+    }
 }

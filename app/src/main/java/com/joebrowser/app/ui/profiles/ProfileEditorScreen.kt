@@ -318,12 +318,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.generalTab(
                 Column(Modifier.padding(16.dp)) {
                     ChoiceRow(
                         palette = palette,
-                        options = UserAgentBuilder.ENGINES,
+                        options = com.joebrowser.app.browser.Engine.SELECTABLE.map { it.key },
                         selected = draft.browserKind,
                         onSelect = { engine ->
                             update(draft.copy(browserKind = engine))
                         },
-                        label = { UserAgentBuilder.prettyEngine(it) },
+                        label = { com.joebrowser.app.browser.Engine.byKey(it).label },
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(

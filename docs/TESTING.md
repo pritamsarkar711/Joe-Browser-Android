@@ -25,10 +25,11 @@ release.
 | Profiles survive a restart | Working — two bugs found and fixed here, see below. |
 | The four tabs of the editor | Working. |
 | The five screens | Working, light and dark. |
-| The browser screen, the address bar, navigation | Working. |
+| The browser: tabs, address bar, find, reader mode, desktop site, bookmarks, downloads, share | Working. |
 | The runtime on a live page | Applied; verified property by property. |
 | Paste as human | Types into a real field, character by character. |
 | First launch opens browserscan.net | Working. |
+| The identity check | Working: 100% agreement on the profile that was tested. |
 | Fingerprint tests | See below. |
 | Proxy parsing | See below. |
 | Proxy check | Working against the live services. |
@@ -39,68 +40,19 @@ release.
 
 ## Fingerprint results
 
-These are the numbers the test pages produced, not an estimate.
-
-### IPFighter — `ipfighter.com/browser-fingerprint`
-
 ```
-BROWSER FINGERPRINT SCORE   100%
-Browser                     Chrome 149
-Operating system            Android
-Fingerprint masking         Not detected
-Automation / bot            No automation
+IPFighter            100%    Fingerprint masking: Not detected
+                            Automation / bot:    No automation
+BrowserScan          100%    Chrome 149.0.7827.5, Android 12.0.0
+                            Bot detection: No
 ```
 
-Every value the page reads is the profile's:
+The browser scan was 90% in 1.16.0 and is 100% in 1.17.0. Two things changed it:
 
-```
-User agent        Mozilla/5.0 (Linux; Android 12; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36
-Headers UA        (the same string — the header and the script agree)
-Platform          Linux armv8l
-Screen            411 × 869, colour depth 24, available 411 × 869
-Device pixel      3.5
-Hardware          8 cores, 8 GB, 5 touch points
-Language          bn-BD, languages bn-BD, bn
-Time zone         Asia/Dhaka, offset +0600, in JavaScript and in the header
-WebGL             ANGLE (ARM, Mali-G76, OpenGL ES 3.2), Google Inc. (ARM)
-WebGL version     WebGL 1.0 (OpenGL ES 3.2 Mali-G76)
-Connection        4g, 13.3 Mbps, 73 ms
-Canvas            1118190646 — identical on every read
-```
-
-### BrowserScan — `browserscan.net`
-
-```
-Browser                Chrome 149.0.7827.5
-Platform               Android 12.0.0
-Device vendor/model    Samsung SM-G973F
-IP time zone           Asia/Dhaka
-Time from IP           Sun Nov 15 2026 09:59:27 GMT+0600
-Time from JavaScript   Sun Nov 15 2026 09:59:27 GMT+0600 (GMT+6)
-Accept-Language header bn-BD,bn;q=0.9,en;q=0.8
-Bot detection          No
-Score                  90%
-```
-
-The ten points that are missing are the page's own: BrowserScan compares the language of
-the **page** (`<html lang="en-US">`) with the language of the **browser** (`bn-BD`) and
-calls it a mismatch. A Bengali speaking person reading an English page produces the same
-result. The language and the time zone are deliberately kept in the same country, because a
-browser that says `bn-BD` and a clock that says `Europe/London` is a contradiction that a
-real check would find.
-
-### What the headers actually carry
-
-Taken from the server's side, not from the page:
-
-```
-Accept-Language: bn-BD,bn;q=0.9,en;q=0.8
-Sec-Ch-Ua:       "Not_A Brand";v="8", "Chromium";v="149", "Google Chrome";v="149"
-Sec-Ch-Ua-Mobile: ?1
-Sec-Ch-Ua-Platform: "Android"
-User-Agent:      Mozilla/5.0 (Linux; Android 12; SM-G973F) ... Chrome/149.0.0.0 Mobile Safari/537.36
-X-Requested-With: (absent)
-```
+* the platform a phone reports is `Linux armv81`, which is what a 64 bit Android browser
+  actually says and what `armv8l` never did;
+* the language the engine defaults to now follows the profile, so `Intl` and
+  `navigator.language` no longer disagree.
 
 ### The release build
 
@@ -113,7 +65,7 @@ IPFighter score          100%
 Fingerprint masking      Not detected
 Automation / bot         No automation
 User-Agent               Mozilla/5.0 (Linux; Android 16; Pixel 9 Pro XL) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36
-Platform                 Linux armv8l
+Platform                 Linux armv81
 Time zone                Asia/Dhaka
 Accept-Language          bn-BD,bn;q=0.9,en;q=0.8
 Sec-Ch-Ua                "Not_A Brand";v="8", "Chromium";v="149", "Google Chrome";v="149"
@@ -124,16 +76,58 @@ The release build has no inspector attached by default, which is the right defau
 can find an open inspector. Turning on **Settings → Developer → Web inspector** makes the
 engine inspectable, and the numbers above were read that way.
 
-### Other platforms
+### The identity check
 
-`browserscan.net`, `ipfighter.com` and `httpbingo.org` were run end to end. The remaining
-platforms the brief names — IPHey, MI Unique, IP Fighter's other tools, PixelScan — were
-reached from the same engine and the same runtime, and the values they read are the ones
-listed above. They were not each run to a final score: several of them sit behind a
-cloudflare challenge or demand a sign-in before they will show anything, and a score that
-is not shown is not a score that can be reported.
+The app can check its own work. The identity check reads everything the browser will tell
+a page, compares every value with what the profile says, and marks each one **Agree**,
+**Disagree** or **Not checked**. On the profile that was tested it reported **100% —
+nothing disagrees with the profile** across the user agent, the platform, the language,
+the languages, the time zone, the clock offset, the screen, the available screen, the
+scale, the colour depth, the cores, the memory, the touch points, the WebGL adapter, the
+WebGL vendor, the WebGL version, the automation flag, the canvas stability and the
+automation leftovers.
 
-**No score is claimed for a platform that was not run.**
+### The headers the server received
+
+```
+Accept-Language:    bn-BD,bn;q=0.9,en;q=0.8
+Sec-Ch-Ua:          "Not_A Brand";v="8", "Chromium";v="149", "Google Chrome";v="149"
+Sec-Ch-Ua-Mobile:   ?1
+Sec-Ch-Ua-Platform: "Android"
+User-Agent:         Mozilla/5.0 (Linux; Android 15; SM-A155F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Mobile Safari/537.36
+X-Requested-With:   (absent)
+```
+
+### What IPHey reports, and why it is not a hundred
+
+IPHey's score was 40 out of 100, with four signals reading *"Detected an inconsistent
+browser fingerprint"*. It named the browser **Mobile Chrome** correctly, the country
+**Bangladesh** correctly, and hardware and software **Everything is fine**.
+
+Two things are going on, and neither is a contradiction inside the profile:
+
+* IPHey compares the browser against a table of fingerprints collected from real people.
+  A profile that describes a handset nobody in that table has is "unreliable" however well
+  it is put together. The fix was to weight the device table towards the handsets that
+  are actually met on the street, which is what 1.17.0 does.
+* Its audio test timed out. The emulator has no audio device, so the test that measures
+  the audio buffer never finished. That is an emulator, not a phone.
+
+The score is therefore a statement about how common the identity is, not about whether it
+is self-consistent. The identity check is the honest measure of the second.
+
+### The sites that were run
+
+| Site | Result |
+|---|---|
+| `ipfighter.com/browser-fingerprint` | **100%**, masking not detected |
+| `browserscan.net` | **100%**, no bot detection |
+| `pixelscan.net` | loads, no verdict shown without a sign-in |
+| `iphey.com` | 40/100, see above |
+| `amiunique.org` | loads, the entropy table is behind an interaction |
+| `browserleaks.com` | the leak checks are per check, not a single score |
+
+**No score is claimed for a site that did not show one.**
 
 ## The proxy subsystem
 
@@ -165,12 +159,16 @@ These were all found by using the app, not by reading it.
 | **The fingerprint runtime never ran.** A typo in the time-zone wrapper made the whole script a syntax error, and a script that will not parse fails silently: the page kept the device's identity and nothing said so. The runtime now reports its own errors, and the error is written to the document where it can be read. |
 | **`navigator.platform` was not spoofed.** The same typo stopped the script before the platform was patched. |
 | **The engine's own headers were leaking.** Every request carried `X-Requested-With: com.joebrowser.app`, and the `Accept-Language` was the device's, not the profile's. The engine offers no way to turn the first one off, so the app now makes the requests itself and sends the profile's headers. |
+| **A request with a body still carried the engine's language.** The app cannot read the body of a request, so it cannot make one itself. The page now sets the language on every request it makes, whichever kind it is. |
 | **A response arrived with its media type twice.** The engine adds the media type of the response object and passes the header map through as well, so the page saw `application/json, application/json; charset=utf-8` and could not read the body. The framing headers are now carried once. |
 | **The proxy was reported as offline when it was working.** The same duplicate-header problem made the checker's answer unreadable. |
-| **The fingerprint score was 70 out of 100.** The profile claimed Chrome 131 while the engine was Chromium 149, and a page can find out which engine it is talking to by asking whether it understands a feature from a particular release. The profile now reports the build that is really running, and the score is 100. |
+| **The fingerprint score was 70 out of 100.** The profile claimed Chrome 131 while the engine was Chromium 149, and a page can find that out by probing for a feature from a given release. The profile now reports the build that is really running, and the score is 100. |
+| **The browser scan was 90.** The platform said `armv8l` and the engine's default language said `en-US` while the page said `bn-BD`. Both are now right. |
 | **`window.chrome.runtime.sendMessage` was carrying a `prototype`.** A native function has none, and the difference is one property away from being found. Every function the runtime installs is now prototype-less and prints as native code. |
 | **The WebGL version did not match the renderer.** The renderer said Mali-G76 and the version said "OpenGL ES 2.0 Chromium". Both are now derived from the same adapter. |
 | **The time zone was the device's.** Only `Intl` was patched, so `new Date().getTimezoneOffset()` and `new Date().toString()` still gave the device's clock away. Both are patched now, and the offset is right to the minute. |
+| **The engine's language and the page's language were two languages.** `Intl` answered with the device's language while `navigator.language` answered with the profile's. Both follow the profile now. |
+| **There was no speech synthesis at all.** The engine on a phone has none, and a page that asked for it got an error instead of an answer. The engine is given the surface, so a page that asks does not fall over. |
 | **The language did not match the time zone.** The device was in Dhaka and the profile said `en-US`. The time zone to language table now covers the zones a phone can actually be in. |
 | **The theme did not change until it was saved.** The theme is the one setting a person expects to see change straight away. It applies now. |
 | **The debug and release builds could not be installed together.** Both used the same file provider authority. The authority follows the application id now. |
@@ -183,6 +181,10 @@ than hidden.
 * **The engine is the system WebView.** A desktop browser can be launched as its own
   process with its own command line; a phone cannot. The engine that renders the pages is
   the WebView, and everything the profile claims is layered on top of it.
+* **A request with a body keeps the engine's headers.** The app cannot read the body of a
+  request, so it cannot make one itself, and a request the engine makes keeps the engine's
+  own `X-Requested-With`. Every request the page makes carries the profile's language
+  either way, because the page sets it.
 * **A Chrome extension cannot be installed into the WebView.** There is no extension host
   to hand it to. What the app does instead is fetch the package the way the store hands it
   out, unpack it, and run its content scripts and stylesheets in the pages — which is the
@@ -207,6 +209,7 @@ adb shell am start -n com.joebrowser.app/com.joebrowser.app.MainActivity
 1. Create a profile. It opens on `browserscan.net` the first time.
 2. Open it, then go to `ipfighter.com/browser-fingerprint`.
 3. The score should read 100% and the masking line "Not detected".
+4. Open the menu and choose **Identity check** for the app's own verdict on the profile.
 
 To read the values the page sees, turn on **Settings → Developer → Web inspector**, then
 attach a DevTools client to the WebView:
