@@ -40,6 +40,7 @@ class RuntimeBuilder(private val context: Context) {
             put("ua", resolved.userAgent)
             put("platform", resolved.platform)
             put("language", fp.language)
+            put("accept", fp.acceptLanguage)
             put("languages", buildJsonArray {
                 val dash = fp.language.indexOf('-')
                 if (dash > 0) {
@@ -67,6 +68,7 @@ class RuntimeBuilder(private val context: Context) {
             put("ua", resolved.userAgent)
             put("platform", resolved.platform)
             put("language", fp.language)
+            put("accept", fp.acceptLanguage)
             put("languages", buildJsonArray {
                 val dash = fp.language.indexOf('-')
                 if (dash > 0) {
@@ -168,5 +170,39 @@ class RuntimeBuilder(private val context: Context) {
     fun buildPasteScript(text: String): String {
         val json = kotlinx.serialization.json.Json.encodeToString(JsonPrimitive.serializer(), JsonPrimitive(text))
         return "try{window.__jbPasteText($json);}catch(e){}"
+    }
+
+    /**
+     * The values the profile claims, for the identity check.
+     *
+     * The check compares what the page reads with what the profile said it would be. It
+     * needs the expected values in the page, and the page is the only place that can be
+     * asked.
+     */
+    fun buildAuditConfig(profile: Profile): String {
+        val fp = profile.fp
+        val resolved = UserAgentBuilder.resolve(fp, profile.browserKind, profile.browserVersion)
+        val offset = -java.util.TimeZone.getTimeZone(fp.timezone)
+            .getOffset(System.currentTimeMillis()) / 60000
+        val config = buildJsonObject {
+            put("ua", resolved.userAgent)
+            put("platform", resolved.platform)
+            put("language", fp.language)
+            put("accept", fp.acceptLanguage)
+            put("languages", fp.languages.joinToString(","))
+            put("cores", fp.cores)
+            put("memory", fp.memory)
+            put("touch", fp.touchPoints)
+            put("screen", "${fp.screenW} x ${fp.screenH}")
+            put("avail", "${fp.availW} x ${fp.availH}")
+            put("depth", fp.colorDepth)
+            put("scale", fp.pixelRatio)
+            put("timezone", fp.timezone)
+            put("offset", offset)
+            put("glvendor", fp.webGlVendor)
+            put("glrenderer", fp.webGlRenderer)
+            put("glversion", com.joebrowser.app.fingerprint.FingerprintFactory.glVersionFor(fp.webGlRenderer))
+        }
+        return "(function(){try{window.__jbExpected=$config;}catch(e){}})();"
     }
 }

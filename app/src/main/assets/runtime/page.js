@@ -608,20 +608,48 @@
 
     /* Intl.DateTimeFormat without an explicit zone must still answer in the profile's
        zone, so the default is pinned. */
-    var OrigDTF = Intl.DateTimeFormat;
-    var WrappedDTF = function DateTimeFormat(locales, options) {
-      if (arguments.length < 2) options = { timeZone: F.tz };
-      else if (options && !options.timeZone) {
-        var copy = {};
-        for (var k in options) copy[k] = options[k];
-        copy.timeZone = F.tz;
-        options = copy;
-      }
-      return new (Function.prototype.bind.apply(OrigDTF, [null, locales, options]))();
-    };
-    WrappedDTF.prototype = OrigDTF.prototype;
-    WrappedDTF.supportedLocalesOf = OrigDTF.supportedLocalesOf;
-    try { Intl.DateTimeFormat = WrappedDTF; } catch (e) {}
+    /* The language the engine defaults to has to be the language the profile claims.
+       A page that reads navigator.language and then reads Intl's own default finds two
+       languages, and the second one is the one the engine could not be asked about. */
+    function wrapLocale(Orig, name, withTimeZone) {
+      var Wrapped = function () {
+        var args = Array.prototype.slice.call(arguments);
+        var locales = args.length > 0 ? args[0] : undefined;
+        var options = args.length > 1 ? args[1] : undefined;
+        if (locales === undefined) {
+          args[0] = F.language;
+        } else if (options === undefined && typeof locales === 'object' && locales !== null) {
+          options = locales;
+          args[0] = F.language;
+        }
+        if (withTimeZone) {
+          if (options === undefined || options === null) {
+            options = { timeZone: F.tz };
+          } else if (!options.timeZone) {
+            var copy = {};
+            for (var k in options) copy[k] = options[k];
+            copy.timeZone = F.tz;
+            options = copy;
+            args[1] = options;
+          }
+        }
+        return new (Function.prototype.bind.apply(Orig, [null].concat(args)))();
+      };
+      Wrapped.prototype = Orig.prototype;
+      try { Wrapped.supportedLocalesOf = Orig.supportedLocalesOf; } catch (e) {}
+      try { Intl[name] = Wrapped; } catch (e) {}
+      return Wrapped;
+    }
+
+    try {
+      wrapLocale(Intl.DateTimeFormat, 'DateTimeFormat', true);
+      wrapLocale(Intl.NumberFormat, 'NumberFormat', false);
+      wrapLocale(Intl.Collator, 'Collator', false);
+      wrapLocale(Intl.PluralRules, 'PluralRules', false);
+      wrapLocale(Intl.RelativeTimeFormat, 'RelativeTimeFormat', false);
+      wrapLocale(Intl.ListFormat, 'ListFormat', false);
+      wrapLocale(Intl.DisplayNames, 'DisplayNames', false);
+    } catch (e) {}
   } catch (e) {}
 
   /* ------------------------------------------------------------------------------------------
@@ -824,18 +852,30 @@
     return q > 255 ? q - 3 : q;
   }
 
+  /* Only the coverage of an edge is touched, never the colour.
+     A machine with a different rasteriser draws the same colours with a slightly
+     different coverage; that is the whole difference, and it is the only one worth
+     faking. The colour channels are left exactly as the page drew them, because a
+     changed colour is a level no rasteriser produces, and a checker that looks for
+     one will find it. Solid pixels are left alone for the same reason: there is no
+     coverage to disagree about.
+     The change is a projection, so reading the canvas, writing it back and reading
+     it again gives the same answer. */
   function perturb(data, width, height, ox, oy) {
     try {
       if (!data || !data.length) return data;
       var w = width > 0 ? width : 1;
       var count = Math.floor(data.length / 4);
       for (var p = 0; p < count; p++) {
-        if ((p & 7) !== 0) continue;
+        var i = p + 3;
+        var a = data[i * 4 + 3];
+        if (a <= 0 || a >= 255) continue;
         var x = (p % w) + (ox | 0), y = ((p / w) | 0) + (oy | 0);
-        var i = p * 4;
-        data[i] = snap(data[i], x, y, 0);
-        data[i + 1] = snap(data[i + 1], x, y, 1);
-        data[i + 2] = snap(data[i + 2], x, y, 2);
+        var d = pixelTarget(x, y, 3);
+        var q = a - (a % 3) + d;
+        if (q < 1) q = 1;
+        if (q > 254) q = 254;
+        data[i * 4 + 3] = q;
       }
     } catch (e) {}
     return data;
@@ -987,8 +1027,47 @@
    * Speech synthesis
    * ------------------------------------------------------------------------------------------ */
 
+  /* A browser engine on a phone has no speech synthesis at all, and a page that asks
+     for it gets an error instead of an answer. A browser that has it answers with an
+     empty list and keeps quiet. The engine is given the surface so a page that asks
+     does not fall over, and the voice list is the one the profile advertises. */
   try {
-    if (typeof SpeechSynthesis !== 'undefined') {
+    if (typeof window.speechSynthesis === 'undefined') {
+      var voiceList = [];
+      var synthStub = {
+        getVoices: mark(function getVoices() { return voiceList.slice(); }, 'getVoices', 0),
+        speak: mark(function speak(u) { }, 'speak', 1),
+        cancel: mark(function cancel() { }, 'cancel', 0),
+        pause: mark(function pause() { }, 'pause', 0),
+        resume: mark(function resume() { }, 'resume', 0),
+        addEventListener: mark(function addEventListener() { }, 'addEventListener', 2),
+        removeEventListener: mark(function removeEventListener() { }, 'removeEventListener', 2),
+        dispatchEvent: mark(function dispatchEvent() { return true; }, 'dispatchEvent', 1),
+        pending: false, speaking: false, paused: false, onvoiceschanged: null
+      };
+      Object.defineProperty(window, 'speechSynthesis', {
+        get: mark(function () { return synthStub; }, 'get speechSynthesis', 0),
+        configurable: true, enumerable: true
+      });
+      if (typeof window.SpeechSynthesisUtterance === 'undefined') {
+        window.SpeechSynthesisUtterance = mark(function SpeechSynthesisUtterance(text) {
+          this.text = text || '';
+          this.lang = '';
+          this.voice = null;
+          this.volume = 1;
+          this.rate = 1;
+          this.pitch = 1;
+        }, 'SpeechSynthesisUtterance', 1);
+      }
+    }
+    var isRealSynth = false;
+    try {
+      isRealSynth = (typeof SpeechSynthesis !== 'undefined') &&
+        (typeof window.speechSynthesis !== 'undefined') &&
+        (window.speechSynthesis instanceof SpeechSynthesis);
+    } catch (e) {}
+
+    if (isRealSynth) {
       var VOICE_TABLE = {
         en: [['Alex', 'en-US'], ['Samantha', 'en-US'], ['Daniel', 'en-GB'], ['Karen', 'en-AU']],
         de: [['Anna', 'de-DE'], ['Daniel', 'de-DE'], ['Anna', 'de-AT'], ['Anna', 'de-CH']],
@@ -1395,6 +1474,53 @@
   /* ------------------------------------------------------------------------------------------
    * Done
    * ------------------------------------------------------------------------------------------ */
+
+  /* ------------------------------------------------------------------------------------------
+   * The language every request carries
+   *
+   * The engine asks for the language of the device. The profile claims a language of its
+   * own, and a page that reads the language out of the script and then compares it with
+   * the language the server received finds two languages in one session. The request
+   * carries the profile's language, whatever the request is.
+   * ------------------------------------------------------------------------------------------ */
+  try {
+    var ACC = F.accept;
+    if (ACC) {
+      var origFetch = window.fetch;
+      if (typeof origFetch === 'function') {
+        var WrappedFetch = function fetch(input, init) {
+          try {
+            init = init || {};
+            var src = (init.headers !== undefined && init.headers !== null)
+              ? init.headers
+              : (input && typeof input === 'object' ? input.headers : null);
+            var headers = new Headers(src || {});
+            if (!headers.has('accept-language')) headers.set('Accept-Language', ACC);
+            init.headers = headers;
+          } catch (e) {}
+          return origFetch.call(this, input, init);
+        };
+        WrappedFetch.prototype = origFetch.prototype;
+        try { WrappedFetch.supportedLocalesOf = origFetch.supportedLocalesOf; } catch (e) {}
+        window.fetch = mark(WrappedFetch, 'fetch', 2, origFetch);
+      }
+
+      if (typeof XMLHttpRequest !== 'undefined') {
+        var origOpen = XMLHttpRequest.prototype.open;
+        var origSend = XMLHttpRequest.prototype.send;
+        method(XMLHttpRequest.prototype, 'open', function open() {
+          try { this.__jbLang = ACC; } catch (e) {}
+          return origOpen.apply(this, arguments);
+        }, 2, origOpen);
+        method(XMLHttpRequest.prototype, 'send', function send(body) {
+          try {
+            if (this.__jbLang) this.setRequestHeader('Accept-Language', this.__jbLang);
+          } catch (e) {}
+          return origSend.apply(this, arguments);
+        }, 1, origSend);
+      }
+    }
+  } catch (e) {}
 
   try {
     document.documentElement.setAttribute('data-jb-runtime', '1');

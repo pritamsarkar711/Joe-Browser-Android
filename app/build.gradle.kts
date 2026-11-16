@@ -13,8 +13,8 @@ android {
         applicationId = "com.joebrowser.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 11600
-        versionName = "1.16.0"
+        versionCode = 11700
+        versionName = "1.17.0"
 
         resourceConfigurations += listOf("en", "de", "es", "fr", "it", "pt", "ru", "tr", "zh")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

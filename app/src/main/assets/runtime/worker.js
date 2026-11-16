@@ -81,9 +81,21 @@
       var o = origResolved.call(this);
       try {
         Object.defineProperty(o, 'timeZone', { value: F.tz, configurable: true, enumerable: true });
+        Object.defineProperty(o, 'locale', { value: F.language, configurable: true, enumerable: true });
       } catch (e) {}
       return o;
     }, 0);
+
+    try {
+      var OrigNum = Intl.NumberFormat;
+      var WrappedNum = function NumberFormat(locales, options) {
+        var args = Array.prototype.slice.call(arguments);
+        if (args.length === 0 || args[0] === undefined) args[0] = F.language;
+        return new (Function.prototype.bind.apply(OrigNum, [null].concat(args)))();
+      };
+      WrappedNum.prototype = OrigNum.prototype;
+      Intl.NumberFormat = WrappedNum;
+    } catch (e) {}
   } catch (e) {}
 
   function pixelTarget(x, y, channel) {
@@ -105,12 +117,14 @@
       var w = width > 0 ? width : 1;
       var count = Math.floor(data.length / 4);
       for (var p = 0; p < count; p++) {
-        if ((p & 7) !== 0) continue;
+        var a = data[p * 4 + 3];
+        if (a <= 0 || a >= 255) continue;
         var x = (p % w) + (ox | 0), y = ((p / w) | 0) + (oy | 0);
-        var i = p * 4;
-        data[i] = snap(data[i], x, y, 0);
-        data[i + 1] = snap(data[i + 1], x, y, 1);
-        data[i + 2] = snap(data[i + 2], x, y, 2);
+        var d = pixelTarget(x, y, 3);
+        var q = a - (a % 3) + d;
+        if (q < 1) q = 1;
+        if (q > 254) q = 254;
+        data[p * 4 + 3] = q;
       }
     } catch (e) {}
     return data;

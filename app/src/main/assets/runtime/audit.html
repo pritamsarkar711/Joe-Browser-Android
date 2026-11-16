@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Identity check</title>
+<style>
+  :root {
+    --bg: #F7F8FA; --card: #FFFFFF; --line: #DFE2E8; --text: #16181D;
+    --dim: #4A4E57; --faint: #6B707A; --accent: #2C6BD6; --ok: #1F8A5F; --bad: #C33744;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181B; --card: #232529; --line: #33353B; --text: #F2F3F5;
+      --dim: #C3C6CC; --faint: #9A9EA6; --accent: #5B9BF7; --ok: #4EC38A; --bad: #F26D76;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 18px 16px 40px;
+  }
+  h1 { font-size: 21px; margin: 0 0 4px; font-weight: 650; letter-spacing: -.2px; }
+  .sub { font-size: 13px; color: var(--faint); margin-bottom: 18px; }
+  .hero {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px; margin-bottom: 14px;
+  }
+  .score { font-size: 40px; font-weight: 650; letter-spacing: -1px; line-height: 1; }
+  .score.ok { color: var(--ok); } .score.bad { color: var(--bad); }
+  #verdict { font-size: 14px; margin-top: 8px; color: var(--dim); }
+  #verdict.ok { color: var(--ok); } #verdict.bad { color: var(--bad); }
+  .row {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 8px;
+  }
+  .left { flex: 1; min-width: 0; }
+  .name { font-size: 15px; font-weight: 500; }
+  .sub2 { font-size: 12px; color: var(--faint); margin-top: 2px; word-break: break-all; }
+  .right { text-align: right; max-width: 46%; }
+  .pill {
+    display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .2px;
+    padding: 3px 8px; border-radius: 7px; text-transform: uppercase;
+  }
+  .pill.ok { background: rgba(31,138,95,.14); color: var(--ok); }
+  .pill.bad { background: rgba(195,55,68,.14); color: var(--bad); }
+  .pill.unchecked { background: rgba(107,112,122,.14); color: var(--faint); }
+  .value { font-size: 12px; color: var(--faint); margin-top: 4px; word-break: break-all; }
+  .row.bad { border-color: rgba(195,55,68,.45); }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--faint);
+       margin: 22px 0 10px; font-weight: 600; }
+  a.site {
+    display: flex; justify-content: space-between; align-items: center; text-decoration: none;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px; margin-bottom: 8px; color: var(--text); font-size: 15px;
+  }
+  a.site span { color: var(--faint); font-size: 13px; }
+</style>
+</head>
+<body>
+  <h1>Identity check</h1>
+  <div class="sub">What the page sees, against what the profile says</div>
+
+  <div class="hero">
+    <div class="score" id="score">—</div>
+    <div id="verdict">Reading the browser…</div>
+  </div>
+
+  <h2>Surfaces</h2>
+  <div id="rows"></div>
+
+  <h2>Check it elsewhere</h2>
+  <a class="site" href="https://ipfighter.com/browser-fingerprint">IPFighter <span>Canvas, WebGL, audio, fonts</span></a>
+  <a class="site" href="https://www.browserscan.net/">BrowserScan <span>Version, time zone, language</span></a>
+  <a class="site" href="https://pixelscan.net/">PixelScan <span>Consistency across surfaces</span></a>
+  <a class="site" href="https://iphey.com/">IPHey <span>Header and script identity</span></a>
+  <a class="site" href="https://amiunique.org/">Am I Unique <span>Entropy across the board</span></a>
+  <a class="site" href="https://browserleaks.com/">BrowserLeaks <span>WebRTC, fonts, canvas, screen</span></a>
+
+  <script src="audit.js"></script>
+</body>
+</html>

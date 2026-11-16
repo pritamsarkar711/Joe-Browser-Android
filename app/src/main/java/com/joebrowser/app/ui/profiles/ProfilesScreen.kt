@@ -1,5 +1,6 @@
 package com.joebrowser.app.ui.profiles
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,28 +15,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Sort
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -60,10 +57,9 @@ import com.joebrowser.app.ui.theme.JoePalette
 /**
  * The profile library.
  *
- * A profile card carries the things that decide whether it is the profile you meant to
- * open: the browser it names, the operating system it claims, the screen it reports, the
- * route it takes and the fingerprint it prints. All of it on one card, because a list of
- * twelve identities that differ only in a name is a list you cannot work with.
+ * A list of identities has to be scannable. Everything that tells two profiles apart is on
+ * one line, in the order a person reads it: what it is called, what it claims to be, where
+ * it goes and what it prints. The rest is one tap away.
  */
 @Composable
 fun ProfilesScreen(
@@ -78,52 +74,115 @@ fun ProfilesScreen(
     onDuplicate: (Profile) -> Unit,
     onLaunch: (Profile) -> Unit,
 ) {
+    var groupFilter by remember { mutableStateOf("") }
+
+    val groups = remember(state.profiles) {
+        state.profiles.map { it.groupOrUngrouped }.distinct().sorted()
+    }
+    val visible = remember(state.visibleProfiles, groupFilter) {
+        if (groupFilter.isEmpty()) state.visibleProfiles
+        else state.visibleProfiles.filter { it.groupOrUngrouped == groupFilter }
+    }
+
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Header(
-                palette = palette,
-                count = state.profiles.size,
-                shown = state.visibleProfiles.size,
-                search = state.search,
-                sortBy = state.sortBy,
-                onSearch = onSearch,
-                onSort = onSort,
-                onHistory = onHistory,
-            )
 
-            if (state.visibleProfiles.isEmpty()) {
-                if (state.profiles.isEmpty()) {
-                    EmptyState(
-                        palette = palette,
-                        icon = Icons.Outlined.Layers,
-                        title = "No profiles yet",
-                        message = "Create your first identity to give it a fingerprint, a proxy and its own storage.",
-                        action = {
-                            ExtendedFloatingActionButton(
-                                onClick = onNew,
-                                containerColor = palette.accent,
-                                contentColor = palette.onAccent,
-                                icon = { Icon(Icons.Outlined.Add, null) },
-                                text = { Text("Create profile") },
-                            )
-                        },
+            // ---- the bar ------------------------------------------------------------
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Profiles",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = palette.text,
                     )
-                } else {
-                    EmptyState(
-                        palette = palette,
-                        icon = Icons.Outlined.Search,
-                        title = "No matching profiles",
-                        message = "Try another name, group, tag or proxy address.",
+                    Text(
+                        text = when {
+                            state.profiles.isEmpty() -> "No profiles yet"
+                            visible.size == state.profiles.size -> "${state.profiles.size} profiles"
+                            else -> "${visible.size} of ${state.profiles.size}"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = palette.textFaint,
                     )
                 }
+                IconButton(onClick = onHistory) {
+                    Icon(Icons.Outlined.Search, contentDescription = "History", tint = palette.textDim)
+                }
+                IconButton(onClick = { onSort((state.sortBy + 1) % 6) }) {
+                    Icon(Icons.Outlined.Sort, contentDescription = "Sort", tint = palette.textDim)
+                }
+            }
+
+            // ---- the groups ----------------------------------------------------------
+            if (groups.size > 1) {
+                LazyRow(
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(bottom = 10.dp),
+                ) {
+                    item {
+                        JoeChip(
+                            palette = palette,
+                            text = "All",
+                            tone = if (groupFilter.isEmpty()) ChipTone.Accent else ChipTone.Neutral,
+                            modifier = Modifier.clickable { groupFilter = "" },
+                        )
+                    }
+                    items(groups) { group ->
+                        JoeChip(
+                            palette = palette,
+                            text = group,
+                            tone = if (groupFilter == group) ChipTone.Accent else ChipTone.Neutral,
+                            modifier = Modifier.clickable {
+                                groupFilter = if (groupFilter == group) "" else group
+                            },
+                        )
+                    }
+                }
+            }
+
+            if (state.profiles.isEmpty()) {
+                EmptyState(
+                    palette = palette,
+                    icon = Icons.Outlined.PlayArrow,
+                    title = "No profiles yet",
+                    message = "Create one and it gets its own fingerprint, its own storage and its own route.",
+                    action = {
+                        Box(
+                            Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(palette.accent)
+                                .clickable { onNew() }
+                                .padding(horizontal = 20.dp, vertical = 11.dp),
+                        ) {
+                            Text(
+                                "Create profile",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = palette.onAccent,
+                            )
+                        }
+                    },
+                )
+            } else if (visible.isEmpty()) {
+                EmptyState(
+                    palette = palette,
+                    icon = Icons.Outlined.Search,
+                    title = "Nothing here",
+                    message = "No profile matches this search or group.",
+                )
             } else {
                 LazyColumn(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp
+                        start = 16.dp, end = 16.dp, bottom = 96.dp
                     ),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    items(state.visibleProfiles, key = { it.id }) { profile ->
+                    items(visible, key = { it.id }) { profile ->
                         ProfileCard(
                             profile = profile,
                             palette = palette,
@@ -138,95 +197,15 @@ fun ProfilesScreen(
             }
         }
 
-        // The empty state already carries the same action, and two buttons that do one
-        // thing are one button too many.
-        if (state.profiles.isNotEmpty()) {
-            ExtendedFloatingActionButton(
-                onClick = onNew,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(20.dp),
-                containerColor = palette.accent,
-                contentColor = palette.onAccent,
-                icon = { Icon(Icons.Outlined.Add, null) },
-                text = { Text("New profile") },
-            )
-        }
-    }
-}
-
-@Composable
-private fun Header(
-    palette: JoePalette,
-    count: Int,
-    shown: Int,
-    search: String,
-    sortBy: Int,
-    onSearch: (String) -> Unit,
-    onSort: (Int) -> Unit,
-    onHistory: () -> Unit,
-) {
-    val sortLabels = listOf("recent", "name", "created", "used", "system", "group")
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    "Profiles",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = palette.text,
-                )
-                Text(
-                    text = if (shown == count) "$count profiles" else "$shown of $count profiles",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = palette.textFaint,
-                )
-            }
-            IconButton(onClick = onHistory) {
-                Icon(Icons.Outlined.History, contentDescription = "History", tint = palette.textDim)
-            }
-            IconButton(onClick = { onSort((sortBy + 1) % sortLabels.size) }) {
-                Icon(Icons.Outlined.Sort, contentDescription = "Sort", tint = palette.textDim)
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = search,
-                onValueChange = onSearch,
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                placeholder = {
-                    Text(
-                        "Search profiles",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = palette.textFaint,
-                    )
-                },
-                leadingIcon = {
-                    Icon(Icons.Outlined.Search, null, tint = palette.textFaint, modifier = Modifier.size(18.dp))
-                },
-                shape = RoundedCornerShape(10.dp),
-                textStyle = MaterialTheme.typography.bodyMedium,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = palette.input,
-                    unfocusedContainerColor = palette.input,
-                    focusedBorderColor = palette.accent,
-                    unfocusedBorderColor = palette.line,
-                    cursorColor = palette.accent,
-                    focusedTextColor = palette.text,
-                    unfocusedTextColor = palette.text,
-                ),
-            )
-            Spacer(Modifier.width(8.dp))
-            JoeChip(
-                palette = palette,
-                text = "Sort: ${sortLabels[sortBy.coerceIn(0, sortLabels.size - 1)]}",
-                tone = ChipTone.Neutral,
-            )
+        FloatingActionButton(
+            onClick = onNew,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(20.dp),
+            containerColor = palette.accent,
+            contentColor = palette.onAccent,
+        ) {
+            Icon(Icons.Filled.Add, contentDescription = "New profile")
         }
     }
 }
@@ -244,13 +223,19 @@ private fun ProfileCard(
     var menu by remember { mutableStateOf(false) }
     val hash = remember(profile.fp) { FingerprintIdentity.overallHash(profile.fp) }
 
-    JoeCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
+    JoeCard(
+        Modifier
+            .fillMaxWidth()
+            .clickable { onEdit() }
+    ) {
+        Column(Modifier.padding(14.dp)) {
+
+            // ---- the name -----------------------------------------------------------
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(9.dp))
                         .background(palette.accentOnBg),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -260,21 +245,21 @@ private fun ProfileCard(
                         color = palette.accent,
                     )
                 }
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(11.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        profile.name.ifBlank { "Untitled profile" },
+                        profile.name.ifBlank { "Untitled" },
                         style = MaterialTheme.typography.titleLarge,
                         color = palette.text,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    Spacer(Modifier.height(1.dp))
                     Text(
                         text = listOf(
                             com.joebrowser.app.fingerprint.UserAgentBuilder.prettyEngine(profile.browserKind),
-                            profile.groupOrUngrouped,
-                            if (profile.freshSession) "fresh session" else null,
-                        ).filterNotNull().joinToString(" · "),
+                            profile.fp.os,
+                        ).joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall,
                         color = palette.textFaint,
                         maxLines = 1,
@@ -287,12 +272,12 @@ private fun ProfileCard(
                     }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         DropdownMenuItem(
-                            text = { Text("Open profile") },
+                            text = { Text("Open") },
                             leadingIcon = { Icon(Icons.Outlined.PlayArrow, null) },
                             onClick = { menu = false; onLaunch() },
                         )
                         DropdownMenuItem(
-                            text = { Text("Edit profile") },
+                            text = { Text("Edit") },
                             leadingIcon = { Icon(Icons.Outlined.Edit, null) },
                             onClick = { menu = false; onEdit() },
                         )
@@ -302,7 +287,7 @@ private fun ProfileCard(
                             onClick = { menu = false; onDuplicate() },
                         )
                         DropdownMenuItem(
-                            text = { Text("Delete profile", color = palette.danger) },
+                            text = { Text("Delete", color = palette.danger) },
                             leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = palette.danger) },
                             onClick = { menu = false; onDelete() },
                         )
@@ -310,65 +295,57 @@ private fun ProfileCard(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
 
-            // The chips that tell two profiles apart.
+            // ---- what tells them apart ----------------------------------------------
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 JoeChip(
                     palette = palette,
-                    text = "${profile.fp.os} · ${profile.fp.screenW}×${profile.fp.screenH}",
-                    tone = ChipTone.Accent,
+                    text = "${profile.fp.screenW}×${profile.fp.screenH}",
                 )
-                if (profile.proxy.enabled) {
-                    JoeChip(
-                        palette = palette,
-                        text = "PROXY ${profile.proxy.lastCountryCode.ifBlank { "" }}".trim(),
-                        icon = Icons.Outlined.Public,
-                        tone = ChipTone.Warn,
-                    )
-                } else {
-                    JoeChip(palette = palette, text = "Direct", tone = ChipTone.Neutral)
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                JoeChip(palette = palette, text = profile.fp.timezoneShort.ifBlank { profile.fp.timezone })
+                JoeChip(
+                    palette = palette,
+                    text = if (profile.proxy.enabled) {
+                        profile.proxy.lastCountryCode.ifBlank { "Proxy" }
+                    } else {
+                        "Direct"
+                    },
+                    tone = if (profile.proxy.enabled) ChipTone.Warn else ChipTone.Neutral,
+                )
                 JoeChip(palette = palette, text = profile.fp.language)
                 Spacer(Modifier.weight(1f))
-                JoeChip(palette = palette, text = hash)
+                StatusDot(
+                    palette = palette,
+                    tone = if (profile.lastOpened > 0) ChipTone.Success else ChipTone.Neutral,
+                    size = 6,
+                )
+                Text(hash.take(6), style = MaterialTheme.typography.labelMedium, color = palette.textFaint)
             }
 
-            if (profile.tags.isNotBlank()) {
+            if (profile.tags.isNotBlank() || profile.groupOrUngrouped != "Ungrouped") {
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (profile.groupOrUngrouped != "Ungrouped") {
+                        JoeChip(palette = palette, text = profile.groupOrUngrouped, tone = ChipTone.Accent)
+                    }
                     profile.tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                        .take(4).forEach { tag ->
+                        .take(3).forEach { tag ->
                             JoeChip(palette = palette, text = "#$tag")
                         }
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
 
+            // ---- the action ---------------------------------------------------------
             Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusDot(
-                    palette = palette,
-                    tone = if (profile.lastOpened > 0) ChipTone.Success else ChipTone.Neutral,
-                    size = 7,
-                )
-                Spacer(Modifier.width(7.dp))
                 Text(
                     text = when {
                         profile.lastOpened == 0L -> "Never opened"
-                        System.currentTimeMillis() - profile.lastOpened < 90_000L -> "Opened just now"
+                        profile.openCount == 1 -> "Opened once"
                         else -> "Opened ${profile.openCount} times"
                     },
                     style = MaterialTheme.typography.bodySmall,
@@ -377,13 +354,13 @@ private fun ProfileCard(
                 )
                 Box(
                     Modifier
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(9.dp))
                         .background(palette.accent)
                         .clickable { onLaunch() }
-                        .padding(horizontal = 18.dp, vertical = 9.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 ) {
                     Text(
-                        "Open profile",
+                        "Open",
                         style = MaterialTheme.typography.labelLarge,
                         color = palette.onAccent,
                     )
